@@ -1,5 +1,9 @@
 import os
 from pathlib import Path
+from utils.readline_fix import fix_readline
+
+fix_readline()
+
 from anthropic import Anthropic 
 from dotenv import load_dotenv
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
@@ -26,16 +30,8 @@ messages = []
 total_input_tokens = 0
 total_output_tokens = 0
 
-while True:
-    print(f"{CYAN}请输入你的问题: {RESET}")
-    query = input(f"{CYAN}mini-harness >> {RESET}")
-    messages.append({ "role": "user", "content": query })
-
-    round_input_tokens = 0
-    round_output_tokens = 0
-    max_turns = 10
-    stop = False
-    while max_turns > 0 and not stop:
+def agent_loop(messages, max_turns=10, on_usage=None):
+    while max_turns > 0:
         response = client.messages.create(
             model=MODEL_ID,
             max_tokens=8192,
@@ -44,37 +40,56 @@ while True:
             tools=TOOLS,
             # stream=True
         )
+        messages.append({ "role": "assistant", "content": response.content })
         max_turns -= 1
-        round_input_tokens += response.usage.input_tokens
-        round_output_tokens += response.usage.output_tokens
+
+        if on_usage:
+            on_usage(response.usage)
 
         if isinstance(response.content, list):
             for item in response.content:
                 if item.type == "thinking":
                     print(f"{CYAN}thinking: {item.thinking}{RESET}")
                     print(f"{GRAY}{'='*50}{RESET}")
-   
+        
         if response.stop_reason == "tool_use":
+            tool_results = []
             for item in response.content:
                 if item.type == "tool_use":
                     result = execute_tool(item)
-                    messages.append({ "role": "user", "content": result })
-
-        if response.stop_reason == "end_turn":
+                    tool_results.append({ "type": "tool_result", "tool_use_id": item.id, "content": result })
+                    
+            messages.append({ "role": "user", "content": tool_results })
+        else:
             for item in response.content:
                 if item.type == "text":
                     print(f"{GREEN}assistant: {item.text}{RESET}")
                     print(f"{GRAY}{'='*50}{RESET}")
-                    messages.append({ "role": "assistant", "content": item.text })
-                    stop = True
-        if stop:
-            break
-    
-    print(f"{YELLOW}\n--- Token 统计 ---{RESET}")
-    print(f"{YELLOW}本轮: 总共={round_input_tokens + round_output_tokens} 输入={round_input_tokens} 输出={round_output_tokens}{RESET}")
+                    return
 
-    total_input_tokens += round_input_tokens
-    total_output_tokens += round_output_tokens
-    print(f"{YELLOW}总计: 总共={total_input_tokens + total_output_tokens} 输入={total_input_tokens} 输出={total_output_tokens}{RESET}")
+if __name__ == "__main__":
+    print(f"{CYAN}请输入你的问题: {RESET}")
+    while True:
+        query = input(f"{CYAN}mini-harness >> {RESET}")
+
+        if query in ("exit", "quit", "q"):
+            break
+
+        messages.append({ "role": "user", "content": query })
+
+        tokens = { "input": 0, "output": 0 }
+        def on_usage(usage):
+            tokens["input"] += usage.input_tokens
+            tokens["output"] += usage.output_tokens
+
+        agent_loop(messages, on_usage=on_usage)
+        round_input_tokens, round_output_tokens = tokens["input"], tokens["output"]
+        
+        print(f"{YELLOW}\n--- Token 统计 ---{RESET}")
+        print(f"{YELLOW}本轮: 总共={round_input_tokens + round_output_tokens} 输入={round_input_tokens} 输出={round_output_tokens}{RESET}")
+
+        total_input_tokens += round_input_tokens
+        total_output_tokens += round_output_tokens
+        print(f"{YELLOW}总计: 总共={total_input_tokens + total_output_tokens} 输入={total_input_tokens} 输出={total_output_tokens}{RESET}")
 
 

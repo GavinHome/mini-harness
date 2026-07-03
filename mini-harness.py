@@ -1,6 +1,7 @@
+import os
+from pathlib import Path
 from anthropic import Anthropic 
 from dotenv import load_dotenv
-import os
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 from tools import TOOLS, execute_tool
 
@@ -15,8 +16,11 @@ print(f"{MAGENTA}MODEL_ID={MODEL_ID}{RESET}")
 print(f"{GRAY}{'='*50}{RESET}")
 client = Anthropic(base_url=BASE_URL, api_key=API_KEY)
 
-SYSTEM_PROMPT = """
-你是mini-harness, 擅长中文等各种语言的聊天助手。一个擅长写作的大师，
+WORKSPACE_DIR = Path.cwd() / ".workspace"
+WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+
+SYSTEM_PROMPT = f"""
+你是mini-harness, 工作目录是{WORKSPACE_DIR}, 使用工具完成任务。直接执行命令，不要解释。
 """
 messages = []
 total_input_tokens = 0
@@ -24,7 +28,7 @@ total_output_tokens = 0
 
 while True:
     print(f"{CYAN}请输入你的问题: {RESET}")
-    query = input(f"{CYAN} mini-harness >> {RESET}")
+    query = input(f"{CYAN}mini-harness >> {RESET}")
     messages.append({ "role": "user", "content": query })
 
     round_input_tokens = 0

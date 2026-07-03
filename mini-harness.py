@@ -11,6 +11,7 @@ from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 from tools import TOOLS, execute_tool
 from permissions import check_permission
 from context import get_context_stats, show_context_bar
+from compact import run_compact_pipeline, reactive_compact, MAX_REACTIVE_RETRIES, compact_history
 
 load_dotenv()
 
@@ -35,15 +36,30 @@ total_output_tokens = 0
 
 
 def agent_loop(messages, max_turns=10, on_usage=None):
+    reactive_retries = 0
     while max_turns > 0:
-        response = client.messages.create(
-            model=MODEL_ID,
-            max_tokens=8192,
-            system=SYSTEM_PROMPT,
-            messages=messages,
-            tools=TOOLS,
-            # stream=True
-        )
+        # ── 压缩管道 (L3 -> L1 -> L2 -> L4) ──
+        run_compact_pipeline(messages, client, MODEL_ID)
+
+        try:
+            response = client.messages.create(
+                model=MODEL_ID,
+                max_tokens=8192,
+                system=SYSTEM_PROMPT,
+                messages=messages,
+                tools=TOOLS,
+                # stream=True
+            )
+            reactive_retries = 0  # 成功调用后重置重试计数
+        except Exception as e:
+            error_str = str(e).lower()
+            if ("prompt_too_long" in error_str or "too many tokens" in error_str) and reactive_retries < MAX_REACTIVE_RETRIES:
+                print(f"{YELLOW}[reactive compact]{RESET}")
+                messages[:] = reactive_compact(messages, client, MODEL_ID)
+                reactive_retries += 1
+                continue
+            raise
+
         messages.append({ "role": "assistant", "content": serialize_content(response.content) })
         max_turns -= 1
 
@@ -55,18 +71,27 @@ def agent_loop(messages, max_turns=10, on_usage=None):
                 if item.type == "thinking":
                     print(f"{CYAN}thinking: {item.thinking}{RESET}")
                     print(f"{GRAY}{'='*50}{RESET}")
-        
+
         if response.stop_reason == "tool_use":
             tool_results = []
             for item in response.content:
                 if item.type == "tool_use":
+                    # compact 工具：立即触发 compact_history
+                    if item.name == "compact":
+                        print(f"{YELLOW}[compact] user triggered summary{RESET}")
+                        messages[:] = compact_history(messages, client, MODEL_ID)
+                        tool_results.append({ "type": "tool_result", "tool_use_id": item.id,
+                                             "content": "[Compacted. Conversation history has been summarized.]" })
+                        messages.append({ "role": "user", "content": tool_results })
+                        break
+
                     if not check_permission(item):
                         tool_results.append({"type": "tool_result", "tool_use_id": item.id, "content": "权限不足，无法执行工具"})
                         continue
 
                     result = execute_tool(item)
                     tool_results.append({ "type": "tool_result", "tool_use_id": item.id, "content": result })
-                    
+
             messages.append({ "role": "user", "content": tool_results })
         else:
             for item in response.content:

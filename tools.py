@@ -83,6 +83,19 @@ TOOLS = [
         }
     },
     {
+        "name": "compact",
+        "description": "Summarize earlier conversation to free context space. Optionally specify a focus area.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "focus": {
+                    "type": "string",
+                    "description": "Optional: specific area to focus the summary on"
+                }
+            }
+        }
+    },
+    {
         "name": "glob_file",
         "description": "在工作目录中查找匹配模式的文件",
         "input_schema": {

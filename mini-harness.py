@@ -68,11 +68,11 @@ def agent_loop(messages, max_turns=10, on_usage=None):
                     return
 
 if __name__ == "__main__":
-    print(f"{CYAN}请输入你的问题: {RESET}")
+    print(f"{CYAN}输入问题，回车发送，输入 q 退出: {RESET}")
     while True:
         query = input(f"{CYAN}mini-harness >> {RESET}")
 
-        if query in ("exit", "quit", "q"):
+        if query.strip().lower() in ("exit", "quit", "q"):
             break
 
         messages.append({ "role": "user", "content": query })

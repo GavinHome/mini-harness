@@ -9,7 +9,7 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 from tools import TOOLS, execute_tool
-from permissions import check_permission
+from hooks import trigger_hooks
 from context import get_context_stats, show_context_bar
 from compact import run_compact_pipeline, reactive_compact, compact_history
 from error_recovery import (
@@ -39,24 +39,14 @@ total_input_tokens = 0
 total_output_tokens = 0
 
 
-def _validate_messages(messages):
-    """Debug: catch empty content before API call."""
-    for i, msg in enumerate(messages):
-        content = msg.get("content")
-        if not content and content != 0:
-            print(f"{RED}[BUG] messages[{i}] has empty content: role={msg.get('role')}, content={content!r}{RESET}")
-
-
-def agent_loop(messages, max_turns=10, on_usage=None):
+def agent_loop(messages, max_turns=10):
     state = RecoveryState(current_model=MODEL_ID)
     max_tokens = 8192
+    usage = {"input": 0, "output": 0}
 
     while max_turns > 0:
         # ── 压缩管道 (L3 -> L1 -> L2 -> L4) ──
         run_compact_pipeline(messages, client, MODEL_ID)
-
-        # ── Debug: validate messages before API call ──
-        _validate_messages(messages)
 
         # ── LLM 调用: with_retry 处理 429/529, 外层处理 prompt_too_long ──
         try:
@@ -81,7 +71,7 @@ def agent_loop(messages, max_turns=10, on_usage=None):
             # 不可恢复
             name = type(e).__name__
             print(f"{RED}[error] {name}: {str(e)[:100]}{RESET}")
-            return
+            return usage
 
         # ── Path 1: max_tokens 截断 -> 升级 或 续写 ──
         if response.stop_reason == "max_tokens":
@@ -103,7 +93,7 @@ def agent_loop(messages, max_turns=10, on_usage=None):
                 continue
             print(f"{RED}[max_tokens] recovery limit reached{RESET}")
             max_turns -= 1
-            return
+            return usage
 
         # ── 正常完成: 追加 assistant 消息 ──
         serialized = serialize_content(response.content)
@@ -113,8 +103,8 @@ def agent_loop(messages, max_turns=10, on_usage=None):
         messages.append({ "role": "assistant", "content": serialized })
         max_turns -= 1
 
-        if on_usage:
-            on_usage(response.usage)
+        usage["input"] += response.usage.input_tokens
+        usage["output"] += response.usage.output_tokens
 
         # ── thinking 输出 ──
         if isinstance(response.content, list):
@@ -140,22 +130,23 @@ def agent_loop(messages, max_turns=10, on_usage=None):
                     compact_called = True
                     break
 
-                if not check_permission(item):
-                    tool_results.append({"type": "tool_result", "tool_use_id": item.id, "content": "权限不足，无法执行工具"})
+                blocked = trigger_hooks("PreToolUse", item)
+                if blocked:
+                    tool_results.append({"type": "tool_result", "tool_use_id": item.id,
+                                         "content": blocked})
                     continue
 
                 result = execute_tool(item)
-                tool_results.append({ "type": "tool_result", "tool_use_id": item.id, "content": result })
+                trigger_hooks("PostToolUse", item, result)
+                tool_results.append({ "type": "tool_result", "tool_use_id": item.id,
+                                     "content": result })
 
             if not compact_called:
                 messages.append({ "role": "user", "content": tool_results })
             continue  # tool_use 分支后继续下一轮
         else:
-            for item in response.content:
-                if item.type == "text":
-                    print(f"{GREEN}assistant: {item.text}{RESET}")
-                    print(f"{GRAY}{'='*50}{RESET}")
-                    return
+            trigger_hooks("Stop", messages)
+            return usage
 
 if __name__ == "__main__":
     print(f"{CYAN}输入问题，回车发送，输入 q 退出: {RESET}")
@@ -165,18 +156,18 @@ if __name__ == "__main__":
         if query.strip().lower() in ("exit", "quit", "q"):
             break
 
+        blocked = trigger_hooks("UserPromptSubmit", query)
+        if blocked:
+            continue
+
         messages.append({ "role": "user", "content": query })
 
         # ── 上下文大小（发送前）──
         show_context_bar(messages, "发送前")
 
-        tokens = { "input": 0, "output": 0 }
-        def on_usage(usage):
-            tokens["input"] += usage.input_tokens
-            tokens["output"] += usage.output_tokens
-
-        agent_loop(messages, on_usage=on_usage)
-        round_input_tokens, round_output_tokens = tokens["input"], tokens["output"]
+        usage = agent_loop(messages)
+        round_input_tokens = usage["input"]
+        round_output_tokens = usage["output"]
 
         # ── 上下文大小（执行完工具结果已回写后）──
         show_context_bar(messages, "回写后")

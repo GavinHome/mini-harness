@@ -1,14 +1,16 @@
 import os
 from pathlib import Path
 from utils.readline_fix import fix_readline
+from utils.serialize import serialize_content
 
 fix_readline()
 
-from anthropic import Anthropic 
+from anthropic import Anthropic
 from dotenv import load_dotenv
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 from tools import TOOLS, execute_tool
 from permissions import check_permission
+from context import get_context_stats, show_context_bar
 
 load_dotenv()
 
@@ -31,6 +33,7 @@ messages = []
 total_input_tokens = 0
 total_output_tokens = 0
 
+
 def agent_loop(messages, max_turns=10, on_usage=None):
     while max_turns > 0:
         response = client.messages.create(
@@ -41,7 +44,7 @@ def agent_loop(messages, max_turns=10, on_usage=None):
             tools=TOOLS,
             # stream=True
         )
-        messages.append({ "role": "assistant", "content": response.content })
+        messages.append({ "role": "assistant", "content": serialize_content(response.content) })
         max_turns -= 1
 
         if on_usage:
@@ -82,6 +85,9 @@ if __name__ == "__main__":
 
         messages.append({ "role": "user", "content": query })
 
+        # ── 上下文大小（发送前）──
+        show_context_bar(messages, "发送前")
+
         tokens = { "input": 0, "output": 0 }
         def on_usage(usage):
             tokens["input"] += usage.input_tokens
@@ -89,12 +95,13 @@ if __name__ == "__main__":
 
         agent_loop(messages, on_usage=on_usage)
         round_input_tokens, round_output_tokens = tokens["input"], tokens["output"]
-        
+
+        # ── 上下文大小（执行完工具结果已回写后）──
+        show_context_bar(messages, "回写后")
+
         print(f"{YELLOW}\n--- Token 统计 ---{RESET}")
         print(f"{YELLOW}本轮: 总共={round_input_tokens + round_output_tokens} 输入={round_input_tokens} 输出={round_output_tokens}{RESET}")
 
         total_input_tokens += round_input_tokens
         total_output_tokens += round_output_tokens
         print(f"{YELLOW}总计: 总共={total_input_tokens + total_output_tokens} 输入={total_input_tokens} 输出={total_output_tokens}{RESET}")
-
-

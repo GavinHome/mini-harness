@@ -8,6 +8,7 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 from tools import TOOLS, execute_tool
+from permissions import check_permission
 
 load_dotenv()
 
@@ -56,6 +57,10 @@ def agent_loop(messages, max_turns=10, on_usage=None):
             tool_results = []
             for item in response.content:
                 if item.type == "tool_use":
+                    if not check_permission(item):
+                        tool_results.append({"type": "tool_result", "tool_use_id": item.id, "content": "权限不足，无法执行工具"})
+                        continue
+
                     result = execute_tool(item)
                     tool_results.append({ "type": "tool_result", "tool_use_id": item.id, "content": result })
                     

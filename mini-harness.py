@@ -1,14 +1,7 @@
 from anthropic import Anthropic 
 from dotenv import load_dotenv
 import os
-
-# ANSI 颜色转义码
-CYAN = '\033[96m'      # 青色 - 思考内容
-GREEN = '\033[92m'     # 绿色 - 最终回复
-YELLOW = '\033[93m'    # 黄色 - Token 统计
-GRAY = '\033[90m'      # 灰色 - 分隔符
-MAGENTA = '\033[95m'   # 品红色 - 调试信息
-RESET = '\033[0m'      # 重置颜色
+from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 
 load_dotenv()
 
@@ -32,14 +25,7 @@ messages = [
     }
 ]
 
-TOOLS = []
-
-response = client.messages.create(
-    model=MODEL_ID,
-    max_tokens=8192,
-    system=SYSTEM_PROMPT,
-    messages=messages,
-    tools=[{
+TOOLS = [{
         "name": "write_file",
         "description": "写入文件",
         "input_schema": {
@@ -54,11 +40,34 @@ response = client.messages.create(
             },
             "required": ["path", "content"]
         }
-    }],
+    }]
+
+def write_file(path: str, content: str):
+    print(f"写入文件: {path}, 内容: {content}")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+    return f"文件 {path} 已写入"
+
+TOOLS_HANDLER = {
+    "write_file": write_file
+}
+def execute_tool(item):
+    print(f"{RED}执行工具: {item.name}{RESET}")
+    print(f"{RED}工具参数: {item.input}{RESET}")
+    return TOOLS_HANDLER[item.name](item.input["path"], item.input["content"])
+
+response = client.messages.create(
+    model=MODEL_ID,
+    max_tokens=8192,
+    system=SYSTEM_PROMPT,
+    messages=messages,
+    tools=TOOLS,
     # stream=True
 )
 
 # print(response.to_json())
+
+
 
 if isinstance(response.content, list):
     for item in response.content:
@@ -69,7 +78,9 @@ if isinstance(response.content, list):
             print(f"{GREEN}assistant: {item.text}{RESET}")
             print(f"{GRAY}{'='*50}{RESET}")
         if item.type == "tool_use":
-            print(item.to_json())
+            print(f"{BLUE}Tool Use: {item.to_json()}{RESET}")
+            result = execute_tool(item)
+            print(f"{GREEN}工具调用结果: {result}{RESET}")
             print(f"{GRAY}{'='*50}{RESET}")
 else:
     print(response)

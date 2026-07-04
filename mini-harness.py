@@ -1,13 +1,10 @@
-import os
-from pathlib import Path
 from utils.readline_fix import fix_readline
 from utils.serialize import serialize_content
 
 fix_readline()
 
-from anthropic import Anthropic
-from dotenv import load_dotenv
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
+from config import BASE_URL, API_KEY, MODEL_ID, WORKSPACE_DIR, client
 from tools import TOOLS, execute_tool
 from hooks import trigger_hooks
 from system_prompt import get_system_prompt, update_context
@@ -18,19 +15,9 @@ from error_recovery import (
     ESCALATED_MAX_TOKENS, CONTINUATION_PROMPT, MAX_RECOVERY_RETRIES,
 )
 
-load_dotenv()
-
-BASE_URL = os.getenv("ANTHROPIC_BASE_URL")
-API_KEY = os.getenv("ANTHROPIC_API_KEY")
-MODEL_ID = os.getenv("MODEL_ID")
-
 print(f"{MAGENTA}BASE_URL={BASE_URL}{RESET}")
 print(f"{MAGENTA}MODEL_ID={MODEL_ID}{RESET}")
 print(f"{GRAY}{'='*50}{RESET}")
-client = Anthropic(base_url=BASE_URL, api_key=API_KEY)
-
-WORKSPACE_DIR = Path.cwd() / ".workspace"
-WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 
 messages = []
 total_input_tokens = 0

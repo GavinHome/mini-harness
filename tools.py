@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict
 from utils.colors import RED, RESET
-WORKSPACE_DIR = Path.cwd() / ".workspace"
+from config import WORKSPACE_DIR
 
 # ============================================
 # 工具定义 (Tool Definitions)

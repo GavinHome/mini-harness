@@ -14,8 +14,7 @@ from typing import Any, Callable
 from pathlib import Path
 from permissions import check_permission
 from utils.colors import CYAN, GREEN, GRAY, MAGENTA, YELLOW, RED, RESET
-
-WORKSPACE_DIR = Path.cwd() / ".workspace"
+from config import WORKSPACE_DIR
 
 HOOKS: dict[str, list[Callable]] = {
     "UserPromptSubmit": [],

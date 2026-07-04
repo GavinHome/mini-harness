@@ -8,14 +8,11 @@
 Cheap first, expensive last: with_retry 处理瞬态错误，外层 try/except 处理业务错误。
 """
 
-import os
 import time
 import random
 
 from utils.colors import YELLOW, RED, GRAY, RESET
-from dotenv import load_dotenv
-
-load_dotenv()
+from config import MODEL_ID, FALLBACK_MODEL_ID
 
 # ── 常量 ──
 ESCALATED_MAX_TOKENS = 64_000
@@ -29,8 +26,8 @@ CONTINUATION_PROMPT = (
     "no apology, no recap. Pick up mid-thought."
 )
 
-FALLBACK_MODEL = os.getenv("FALLBACK_MODEL_ID")
-PRIMARY_MODEL = os.getenv("MODEL_ID")
+FALLBACK_MODEL = FALLBACK_MODEL_ID
+PRIMARY_MODEL = MODEL_ID
 
 
 class RecoveryState:

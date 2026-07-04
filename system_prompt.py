@@ -9,7 +9,9 @@ Design:
 
 import json
 
-WORKSPACE_DIR = __import__("pathlib").Path.cwd() / ".workspace"
+from pathlib import Path
+from config import WORKSPACE_DIR
+
 MEMORY_DIR = WORKSPACE_DIR.parent / ".memory"
 MEMORY_INDEX = MEMORY_DIR / "MEMORY.md"
 

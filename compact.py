@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 from utils.colors import YELLOW, CYAN, GRAY, RESET
+from config import WORKDIR
 
 # --- 常量 ---
 CONTEXT_LIMIT = 50_000        # 字符估算阈值
@@ -20,7 +21,6 @@ MAX_TOOL_RESULT_BYTES = 200_000  # L3: 最后一条消息中 tool_result 总字�
 MAX_MESSAGES = 50             # L1: 消息数上限
 KEEP_HEAD = 3                 # L1: 保留头部消息数
 
-WORKDIR = Path.cwd()
 TOOL_RESULTS_DIR = WORKDIR / ".task_outputs" / "tool-results"
 TRANSCRIPT_DIR = WORKDIR / ".transcripts"
 

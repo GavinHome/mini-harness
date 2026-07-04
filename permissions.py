@@ -1,5 +1,6 @@
 from pathlib import Path
 from utils.colors import YELLOW, RED, RESET
+from config import WORKSPACE_DIR
 
 
 # === Permission: 三层闸门 ===
@@ -11,10 +12,11 @@ def check_deny_list(command):
     return False
 
 def check_rules(name, args):
+    WORKSPACE = WORKSPACE_DIR
     PERMISSION_RULES = [
         {
             "tools": ["write_file", "edit_file"],
-            "check": lambda args: not (Path.cwd() / ".workspace" / args.get("path", "")).resolve().is_relative_to(Path.cwd() / ".workspace"),
+            "check": lambda args: not (WORKSPACE / args.get("path", "")).resolve().is_relative_to(WORKSPACE),
             "message": "Writing outside workspace is not allowed"
         },
         {

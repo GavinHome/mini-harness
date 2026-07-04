@@ -14,6 +14,7 @@ from error_recovery import (
     RecoveryState, with_retry, is_prompt_too_long_error,
     ESCALATED_MAX_TOKENS, CONTINUATION_PROMPT, MAX_RECOVERY_RETRIES,
 )
+from memory import extract_memories, inject_memories, load_memories, consolidate_memories
 
 print(f"{MAGENTA}BASE_URL={BASE_URL}{RESET}")
 print(f"{MAGENTA}MODEL_ID={MODEL_ID}{RESET}")
@@ -32,11 +33,20 @@ def agent_loop(messages, max_turns=10, context=None):
     context = update_context(context or {}, messages)
 
     while max_turns > 0:
+        # ── 压缩前快照（记忆提取用，保留原始对话完整度）──
+        pre_compress = [
+            m if isinstance(m, dict) else {"role": m.get("role", ""), "content": str(m.get("content", ""))}
+            for m in messages
+        ]
+
         # ── 压缩管道 (L3 -> L1 -> L2 -> L4) ──
         run_compact_pipeline(messages, client, MODEL_ID)
 
         # 消息变化后刷新 context
         context = update_context(context, messages)
+
+        # ── 记忆注入（每轮只做一次 side-query）──
+        request_messages = inject_memories(messages)
 
         # ── LLM 调用: with_retry 处理 429/529, 外层处理 prompt_too_long ──
         try:
@@ -46,7 +56,7 @@ def agent_loop(messages, max_turns=10, context=None):
                         model=mdl,
                         max_tokens=mt,
                         system=get_system_prompt(context),
-                        messages=messages,
+                        messages=request_messages,
                         tools=TOOLS,
                     ),
                 state,
@@ -136,6 +146,8 @@ def agent_loop(messages, max_turns=10, context=None):
             continue  # tool_use 分支后继续下一轮
         else:
             trigger_hooks("Stop", messages)
+            extract_memories(pre_compress)
+            consolidate_memories()
             return usage, context
 
 if __name__ == "__main__":

@@ -9,11 +9,9 @@ Design:
 
 import json
 
-from pathlib import Path
 from config import WORKSPACE_DIR
 
-MEMORY_DIR = WORKSPACE_DIR.parent / ".memory"
-MEMORY_INDEX = MEMORY_DIR / "MEMORY.md"
+from memory import MEMORY_INDEX
 
 # ============================================
 #  Prompt Sections (文本模板库存)
@@ -35,9 +33,7 @@ def update_context(context: dict, messages: list) -> dict:
     from tools import TOOLS
     memories = ""
     if MEMORY_INDEX.exists():
-        content = MEMORY_INDEX.read_text().strip()
-        if content:
-            memories = content
+        memories = MEMORY_INDEX.read_text()[:2000]
     return {
         "enabled_tools": [t["name"] for t in TOOLS],
         "workspace": str(WORKSPACE_DIR),

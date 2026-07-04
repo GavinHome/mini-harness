@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 from tools import TOOLS, execute_tool
 from hooks import trigger_hooks
+from system_prompt import get_system_prompt, update_context
 from context import get_context_stats, show_context_bar
 from compact import run_compact_pipeline, reactive_compact, compact_history
 from error_recovery import (
@@ -31,22 +32,24 @@ client = Anthropic(base_url=BASE_URL, api_key=API_KEY)
 WORKSPACE_DIR = Path.cwd() / ".workspace"
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 
-SYSTEM_PROMPT = f"""
-你是mini-harness, 工作目录是{WORKSPACE_DIR}, 使用工具完成任务。直接执行命令，不要解释。
-"""
 messages = []
 total_input_tokens = 0
 total_output_tokens = 0
 
 
-def agent_loop(messages, max_turns=10):
+def agent_loop(messages, max_turns=10, context=None):
     state = RecoveryState(current_model=MODEL_ID)
     max_tokens = 8192
     usage = {"input": 0, "output": 0}
 
+    context = update_context(context or {}, messages)
+
     while max_turns > 0:
         # ── 压缩管道 (L3 -> L1 -> L2 -> L4) ──
         run_compact_pipeline(messages, client, MODEL_ID)
+
+        # 消息变化后刷新 context
+        context = update_context(context, messages)
 
         # ── LLM 调用: with_retry 处理 429/529, 外层处理 prompt_too_long ──
         try:
@@ -55,7 +58,7 @@ def agent_loop(messages, max_turns=10):
                     client.messages.create(
                         model=mdl,
                         max_tokens=mt,
-                        system=SYSTEM_PROMPT,
+                        system=get_system_prompt(context),
                         messages=messages,
                         tools=TOOLS,
                     ),
@@ -71,7 +74,7 @@ def agent_loop(messages, max_turns=10):
             # 不可恢复
             name = type(e).__name__
             print(f"{RED}[error] {name}: {str(e)[:100]}{RESET}")
-            return usage
+            return usage, context
 
         # ── Path 1: max_tokens 截断 -> 升级 或 续写 ──
         if response.stop_reason == "max_tokens":
@@ -93,7 +96,7 @@ def agent_loop(messages, max_turns=10):
                 continue
             print(f"{RED}[max_tokens] recovery limit reached{RESET}")
             max_turns -= 1
-            return usage
+            return usage, context
 
         # ── 正常完成: 追加 assistant 消息 ──
         serialized = serialize_content(response.content)
@@ -146,10 +149,11 @@ def agent_loop(messages, max_turns=10):
             continue  # tool_use 分支后继续下一轮
         else:
             trigger_hooks("Stop", messages)
-            return usage
+            return usage, context
 
 if __name__ == "__main__":
     print(f"{CYAN}输入问题，回车发送，输入 q 退出: {RESET}")
+    context = {}
     while True:
         query = input(f"{CYAN}mini-harness >> {RESET}")
 
@@ -165,7 +169,7 @@ if __name__ == "__main__":
         # ── 上下文大小（发送前）──
         show_context_bar(messages, "发送前")
 
-        usage = agent_loop(messages)
+        usage, context = agent_loop(messages, context=context)
         round_input_tokens = usage["input"]
         round_output_tokens = usage["output"]
 

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict
 from utils.colors import RED, RESET
 from config import WORKSPACE_DIR
+from todo import run_todo_write
 
 # ============================================
 # 工具定义 (Tool Definitions)
@@ -108,6 +109,27 @@ TOOLS = [
             },
             "required": ["pattern"]
         }
+    },
+    {
+        "name": "todo_write",
+        "description": "Create and manage a task list for your current coding session.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "todos": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "content": {"type": "string"},
+                            "status": {"type": "string", "enum": ["pending", "in_progress", "completed"]}
+                        },
+                        "required": ["content", "status"]
+                    }
+                }
+            },
+            "required": ["todos"]
+        }
     }
 ]
 
@@ -191,6 +213,7 @@ TOOLS_HANDLER: Dict[str, callable] = {
     "write_file": write_file,
     "edit_file": edit_file,
     "glob_file": glob_file,
+    "todo_write": run_todo_write,
 }
 
 

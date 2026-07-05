@@ -23,6 +23,7 @@ print(f"{GRAY}{'='*50}{RESET}")
 messages = []
 total_input_tokens = 0
 total_output_tokens = 0
+rounds_since_todo = 0
 
 
 def agent_loop(messages, max_turns=10, context=None):
@@ -33,6 +34,13 @@ def agent_loop(messages, max_turns=10, context=None):
     context = update_context(context or {}, messages)
 
     while max_turns > 0:
+        # ── Nag reminder: 3 轮未更新 todo → 强制回顾 ──
+        global rounds_since_todo
+        if rounds_since_todo >= 3 and messages:
+            messages.append({"role": "user",
+                             "content": "<reminder>Update your todos.</reminder>"})
+            rounds_since_todo = 0
+
         # ── 压缩前快照（记忆提取用，保留原始对话完整度）──
         pre_compress = [
             m if isinstance(m, dict) else {"role": m.get("role", ""), "content": str(m.get("content", ""))}
@@ -115,6 +123,7 @@ def agent_loop(messages, max_turns=10, context=None):
 
         # ── stop_reason 分发 ──
         if response.stop_reason == "tool_use":
+            rounds_since_todo += 1
             tool_results = []
             compact_called = False
             for item in response.content:
@@ -140,6 +149,10 @@ def agent_loop(messages, max_turns=10, context=None):
                 trigger_hooks("PostToolUse", item, result)
                 tool_results.append({ "type": "tool_result", "tool_use_id": item.id,
                                      "content": result })
+
+                # todo_write 调用后归零计数器
+                if item.name == "todo_write":
+                    rounds_since_todo = 0
 
             if not compact_called:
                 messages.append({ "role": "user", "content": tool_results })

@@ -22,6 +22,10 @@ PROMPT_SECTIONS = {
     "tools": "Available tools: {tool_names}.",
     "workspace": f"Working directory: {WORKSPACE_DIR}",
     "memory": "Relevant memories are injected below when available.",
+    "planning": (
+        "Before starting any multi-step task, use todo_write to plan your steps. "
+        "Update status (pending → in_progress → completed) as you progress."
+    ),
 }
 
 # ============================================
@@ -52,6 +56,7 @@ def assemble_system_prompt(context: dict) -> str:
             tool_names=", ".join(context.get("enabled_tools", []))
         ),
         PROMPT_SECTIONS["workspace"],
+        PROMPT_SECTIONS["planning"],
     ]
 
     if context.get("memories"):

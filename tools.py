@@ -17,6 +17,7 @@ from task import (
     claim_task,
     complete_task,
 )
+from teams import TEAMS_TOOLS, TEAMS_HANDLERS
 
 # ============================================
 # 工具定义 (Tool Definitions)
@@ -203,22 +204,13 @@ TOOLS = [
             },
             "required": ["task_id"]
         }
-    }
+    },
 ]
 
+TOOLS.extend(TEAMS_TOOLS)
+
 
 # ============================================
-# 工具注册表 (Tool Registry)
-# ============================================
-TOOLS_HANDLER: Dict[str, callable] = {
-    "run_bash": run_bash,
-    "read_file": read_file,
-    "write_file": write_file,
-    "edit_file": edit_file,
-    "glob_file": glob_file,
-    "todo_write": run_todo_write,
-    "task": spawn_subagent,
-}
 
 
 # ============================================
@@ -276,6 +268,8 @@ TOOLS_HANDLER: Dict[str, callable] = {
     "claim_task": run_claim_task,
     "complete_task": run_complete_task,
 }
+
+TOOLS_HANDLER.update(TEAMS_HANDLERS)
 
 
 # ============================================

@@ -15,6 +15,7 @@ from error_recovery import (
     ESCALATED_MAX_TOKENS, CONTINUATION_PROMPT, MAX_RECOVERY_RETRIES,
 )
 from memory import extract_memories, inject_memories, load_memories, consolidate_memories
+from teams import consume_lead_inbox
 
 print(f"{MAGENTA}BASE_URL={BASE_URL}{RESET}")
 print(f"{MAGENTA}MODEL_ID={MODEL_ID}{RESET}")
@@ -177,6 +178,15 @@ if __name__ == "__main__":
             continue
 
         messages.append({ "role": "user", "content": query })
+
+        # ── 队友收件箱（在 agent_loop 前注入，Lead 本轮可见）──
+        inbox = consume_lead_inbox(route_protocol=True)
+        if inbox:
+            inbox_text = "\n".join(
+                f"From {m['from']} [{m['type']}]: {m['content'][:200]}"
+                for m in inbox)
+            messages.append({"role": "user",
+                "content": f"[Inbox]\n{inbox_text}"})
 
         # ── 上下文大小（发送前）──
         show_context_bar(messages, "发送前")

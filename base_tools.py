@@ -15,12 +15,13 @@ from config import WORKSPACE_DIR
 # 基础工具函数
 # ============================================
 
-def run_bash(command: str) -> str:
+def run_bash(command: str, cwd: str | None = None) -> str:
     print(f"执行命令: {command}")
+    workdir = Path(cwd) if cwd else WORKSPACE_DIR
     result = subprocess.run(
         command,
         shell=True,
-        cwd=WORKSPACE_DIR,
+        cwd=workdir,
         capture_output=True,
         text=True,
         timeout=60,
@@ -30,19 +31,20 @@ def run_bash(command: str) -> str:
     return f"命令执行成功:\nstdout: {result.stdout}"
 
 
-def safe_path(path: str) -> Path:
+def safe_path(path: str, cwd: str | None = None) -> Path:
     p = Path(path)
+    base = Path(cwd) if cwd else WORKSPACE_DIR
     if p.is_absolute():
         resolved = p.resolve()
     else:
-        resolved = (WORKSPACE_DIR / p).resolve()
+        resolved = (base / p).resolve()
     if not resolved.is_relative_to(WORKSPACE_DIR):
         raise ValueError(f"路径 {path} 不在安全工作目录 {WORKSPACE_DIR} 内")
     return resolved
 
 
-def read_file(path: str) -> str:
-    safe = safe_path(path)
+def read_file(path: str, cwd: str | None = None) -> str:
+    safe = safe_path(path, cwd)
     print(f"读取文件: {safe}")
     if not safe.exists():
         return f"文件不存在: {path}"
@@ -52,8 +54,8 @@ def read_file(path: str) -> str:
         return f.read()
 
 
-def write_file(path: str, content: str) -> str:
-    safe = safe_path(path)
+def write_file(path: str, content: str, cwd: str | None = None) -> str:
+    safe = safe_path(path, cwd)
     print(f"写入文件: {safe}")
     safe.parent.mkdir(parents=True, exist_ok=True)
     with open(safe, "w", encoding="utf-8") as f:

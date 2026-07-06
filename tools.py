@@ -283,4 +283,4 @@ def execute_tool(item) -> Any:
     handler = TOOLS_HANDLER.get(item.name)
     if not handler:
         raise ValueError(f"未知工具: {item.name}")
-    return handler(**item.input)
+    return handler(**(item.input or {}))

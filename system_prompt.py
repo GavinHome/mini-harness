@@ -23,8 +23,16 @@ PROMPT_SECTIONS = {
     "workspace": f"Working directory: {WORKSPACE_DIR}",
     "memory": "Relevant memories are injected below when available.",
     "planning": (
-        "Before starting any multi-step task, use todo_write to plan your steps. "
-        "Update status (pending → in_progress → completed) as you progress."
+        "For simple multi-step tasks you handle yourself, use todo_write to plan "
+        "your steps. Update status (pending → in_progress → completed) as you progress."
+    ),
+    "teams": (
+        "For complex tasks that span different specialties and can be parallelized, "
+        "use spawn_teammate to create specialized teammates. Each teammate works "
+        "autonomously in their own thread. You manage them via send_message, "
+        "check_inbox, request_shutdown, request_plan, and review_plan. "
+        "Assign one focused task per teammate and let them claim and complete it. "
+        "Simple multi-step tasks can be handled directly with todo_write."
     ),
 }
 
@@ -57,6 +65,7 @@ def assemble_system_prompt(context: dict) -> str:
         ),
         PROMPT_SECTIONS["workspace"],
         PROMPT_SECTIONS["planning"],
+        PROMPT_SECTIONS["teams"],
     ]
 
     if context.get("memories"):

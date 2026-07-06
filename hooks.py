@@ -62,7 +62,9 @@ def _permission_hook(tool):
 
 def _log_pre_tool(tool):
     """PreToolUse: log every tool call."""
-    args_preview = str(list(tool.input.values())[:2])[:60]
+    args_preview = ""
+    if tool.input:
+        args_preview = str(list(tool.input.values())[:2])[:60]
     print(f"{GRAY}[hook] PreToolUse: {tool.name}({args_preview}){RESET}")
     return None
 

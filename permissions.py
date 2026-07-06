@@ -41,8 +41,8 @@ def ask_user(name, args, reason):
 
 def check_permission(tool) -> bool:
     name = tool.name
-    args = tool.input
-    command = tool.input.get("command", "")
+    args = tool.input or {}
+    command = args.get("command", "")
 
     if name == "run_bash":
         reason = check_deny_list(command)

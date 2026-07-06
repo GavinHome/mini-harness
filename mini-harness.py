@@ -27,14 +27,14 @@ total_output_tokens = 0
 rounds_since_todo = 0
 
 
-def agent_loop(messages, max_turns=10, context=None):
+def agent_loop(messages, context=None):
     state = RecoveryState(current_model=MODEL_ID)
     max_tokens = 8192
     usage = {"input": 0, "output": 0}
 
     context = update_context(context or {}, messages)
 
-    while max_turns > 0:
+    while True:
         # ── Nag reminder: 3 轮未更新 todo → 强制回顾 ──
         global rounds_since_todo
         if rounds_since_todo >= 3 and messages:
@@ -98,10 +98,8 @@ def agent_loop(messages, max_turns=10, context=None):
                 messages.append({ "role": "user", "content": CONTINUATION_PROMPT })
                 state.recovery_count += 1
                 print(f"{YELLOW}[max_tokens] continuation {state.recovery_count}/{MAX_RECOVERY_RETRIES}{RESET}")
-                max_turns -= 1
                 continue
             print(f"{RED}[max_tokens] recovery limit reached{RESET}")
-            max_turns -= 1
             return usage, context
 
         # ── 正常完成: 追加 assistant 消息 ──
@@ -110,12 +108,11 @@ def agent_loop(messages, max_turns=10, context=None):
             # 过滤后为空（只有 thinking block），保留原始内容避免 content=[]
             serialized = serialize_content(response.content, filter_thinking=False)
         messages.append({ "role": "assistant", "content": serialized })
-        max_turns -= 1
 
         usage["input"] += response.usage.input_tokens
         usage["output"] += response.usage.output_tokens
 
-        # ── thinking 输出 ──
+        # ── 思考输出 ──
         if isinstance(response.content, list):
             for item in response.content:
                 if item.type == "thinking":
@@ -163,6 +160,7 @@ def agent_loop(messages, max_turns=10, context=None):
             extract_memories(pre_compress)
             consolidate_memories()
             return usage, context
+
 
 if __name__ == "__main__":
     print(f"{CYAN}输入问题，回车发送，输入 q 退出: {RESET}")

@@ -324,7 +324,8 @@ def spawn_teammate_thread(name: str, role: str, prompt: str) -> str:
                             match.group(1) if match else output)
                     else:
                         handler = sub_handlers.get(block.name)
-                        output = handler(**block.input) if handler else f"Unknown tool: {block.name}"
+                        params = block.input or {}
+                        output = handler(**params) if handler else f"Unknown tool: {block.name}"
                     results.append({"type": "tool_result",
                                     "tool_use_id": block.id,
                                     "content": str(output)})

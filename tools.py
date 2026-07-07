@@ -23,6 +23,7 @@ from task import (
     list_worktrees,
 )
 from skills import load_skill
+from cron import run_schedule_cron, run_list_crons, run_cancel_cron
 from teams import TEAMS_TOOLS, TEAMS_HANDLERS
 
 # ============================================
@@ -272,6 +273,36 @@ TOOLS = [
             "required": ["name"]
         }
     },
+    {
+        "name": "schedule_cron",
+        "description": "Schedule a cron job that triggers an agent prompt at specified times. Cron format: 'minute hour day-of-month month day-of-week'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "cron": {"type": "string", "description": "Cron expression (5 fields): e.g. '*/5 * * * *' for every 5 min, '0 9 * * 1-5' for 9am weekdays"},
+                "prompt": {"type": "string", "description": "The prompt to execute when the cron fires"},
+                "recurring": {"type": "boolean", "description": "If true (default), repeats. If false, one-shot only."},
+                "durable": {"type": "boolean", "description": "If true (default), survives restart. If false, session-only."}
+            },
+            "required": ["cron", "prompt"]
+        }
+    },
+    {
+        "name": "list_crons",
+        "description": "List all scheduled cron jobs with their schedule, prompt, and status.",
+        "input_schema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "cancel_cron",
+        "description": "Cancel a scheduled cron job by its ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "job_id": {"type": "string", "description": "The cron job ID to cancel"}
+            },
+            "required": ["job_id"]
+        }
+    },
 ]
 
 TOOLS.extend(TEAMS_TOOLS)
@@ -340,6 +371,9 @@ TOOLS_HANDLER: Dict[str, callable] = {
     "merge_worktree": merge_worktree,
     "list_worktrees": list_worktrees,
     "load_skill": load_skill,
+    "schedule_cron": run_schedule_cron,
+    "list_crons": run_list_crons,
+    "cancel_cron": run_cancel_cron,
 }
 
 TOOLS_HANDLER.update(TEAMS_HANDLERS)

@@ -1,5 +1,6 @@
 from utils.readline_fix import fix_readline
 from utils.serialize import serialize_content
+import threading
 
 fix_readline()
 
@@ -17,6 +18,7 @@ from error_recovery import (
 from memory import extract_memories, inject_memories, load_memories, consolidate_memories
 from teams import consume_lead_inbox
 from skills import scan_skills
+from cron import start_cron_threads
 
 print(f"{MAGENTA}BASE_URL={BASE_URL}{RESET}")
 print(f"{MAGENTA}MODEL_ID={MODEL_ID}{RESET}")
@@ -26,9 +28,11 @@ print(f"{GRAY}{'='*50}{RESET}")
 scan_skills()  # 启动时扫描 skills 目录，填充 SKILL_REGISTRY
 
 messages = []
+context = {}
 total_input_tokens = 0
 total_output_tokens = 0
 rounds_since_todo = 0
+agent_lock = threading.Lock()  # 防止 agent_loop 并发执行
 
 
 def agent_loop(messages, context=None):
@@ -168,7 +172,10 @@ def agent_loop(messages, context=None):
 
 if __name__ == "__main__":
     print(f"{CYAN}输入问题，回车发送，输入 q 退出: {RESET}")
-    context = {}
+
+    # ── 启动 cron 线程（scheduler + autorun）──
+    start_cron_threads(agent_loop, messages, context, agent_lock)
+
     while True:
         query = input(f"{CYAN}mini-harness >> {RESET}")
 
@@ -193,7 +200,8 @@ if __name__ == "__main__":
         # ── 上下文大小（发送前）──
         show_context_bar(messages, "发送前")
 
-        usage, context = agent_loop(messages, context=context)
+        with agent_lock:
+            usage, context = agent_loop(messages, context=context)
         round_input_tokens = usage["input"]
         round_output_tokens = usage["output"]
 

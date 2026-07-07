@@ -149,7 +149,8 @@ def _idle_poll(agent_name: str, messages: list,
                         worktree_context["path"] = str(wt_path)
                 messages.append({"role": "user",
                     "content": f"<auto-claimed>Task {task_data['id']}: "
-                               f"{task_data['subject']}</auto-claimed>"})
+                               f"{task_data['subject']}</auto-claimed>" +
+                    (f"\nWork directory: {wt_path}" if task.worktree else "")})
                 return "work"
     return "timeout"
 
@@ -303,7 +304,9 @@ def spawn_teammate_thread(name: str, role: str, prompt: str) -> str:
                         model=MODEL_ID,
                         system=f"You are '{name}', a {role}. "
                                f"If a task has a worktree, work in that directory. "
-                               f"Use tools to complete tasks.",
+                               f"The worktree contains the project at an isolated git branch. "
+                               f"Write only the files needed for your task in the worktree. "
+                               f"Do NOT copy the entire project. Use tools to complete tasks.",
                         messages=messages[-20:],
                         tools=sub_tools,
                         max_tokens=8000,

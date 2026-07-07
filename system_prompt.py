@@ -9,7 +9,7 @@ Design:
 
 import json
 
-from config import WORKSPACE_DIR
+from config import WORKSPACE_DIR, WORKTREES_DIR
 
 from memory import MEMORY_INDEX
 
@@ -35,11 +35,15 @@ PROMPT_SECTIONS = {
         "Simple multi-step tasks can be handled directly with todo_write."
     ),
     "worktree": (
-        "Worktree isolation: use create_worktree to create an isolated git branch + "
-        "directory for parallel work. Bind it to a task with task_id. After work is "
-        "done, use merge_worktree to merge the branch, then remove_worktree or "
-        "keep_worktree. If a task has a worktree, operate inside that directory. "
-        "Available tools: create_worktree, remove_worktree, keep_worktree, merge_worktree, list_worktrees."
+        "Worktree isolation (S20 pattern):\n"
+        "1. Always use the create_worktree tool to create worktrees. "
+        "Do NOT run 'git worktree add' via bash — it creates worktrees in the wrong place.\n"
+        "2. create_worktree(name, task_id) creates a branch 'wt/{name}' and a directory "
+        f"at {WORKTREES_DIR}/{{name}}. This is the ONLY place worktrees should live.\n"
+        "3. After creating a worktree, create a task bound to it, then assign that task to a teammate.\n"
+        "4. After the teammate completes, merge_worktree(name) to merge the branch, "
+        "then remove_worktree(name) or keep_worktree(name).\n"
+        "5. When assigning a task with a worktree, tell the teammate the worktree path."
     ),
 }
 

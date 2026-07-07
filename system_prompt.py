@@ -12,6 +12,7 @@ import json
 from config import WORKSPACE_DIR, WORKTREES_DIR
 
 from memory import MEMORY_INDEX
+from skills import list_skills
 
 # ============================================
 #  Prompt Sections (文本模板库存)
@@ -45,6 +46,7 @@ PROMPT_SECTIONS = {
         "then remove_worktree(name) or keep_worktree(name).\n"
         "5. When assigning a task with a worktree, tell the teammate the worktree path."
     ),
+    "skills": "Skills catalog:\n{skills_catalog}\nUse load_skill(name) when a skill is relevant for your task.",
 }
 
 # ============================================
@@ -78,6 +80,7 @@ def assemble_system_prompt(context: dict) -> str:
         PROMPT_SECTIONS["planning"],
         PROMPT_SECTIONS["teams"],
         PROMPT_SECTIONS["worktree"],
+        PROMPT_SECTIONS["skills"].format(skills_catalog=list_skills()),
     ]
 
     if context.get("memories"):

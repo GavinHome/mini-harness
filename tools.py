@@ -22,6 +22,7 @@ from task import (
     merge_worktree,
     list_worktrees,
 )
+from skills import load_skill
 from teams import TEAMS_TOOLS, TEAMS_HANDLERS
 
 # ============================================
@@ -260,6 +261,17 @@ TOOLS = [
         "name": "list_worktrees",
         "description": "List all active git worktrees.",
         "input_schema": {"type": "object", "properties": {}, "required": []}},
+    {
+        "name": "load_skill",
+        "description": "Load the full content of a skill by name for detailed guidance.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Skill name to load"}
+            },
+            "required": ["name"]
+        }
+    },
 ]
 
 TOOLS.extend(TEAMS_TOOLS)
@@ -327,6 +339,7 @@ TOOLS_HANDLER: Dict[str, callable] = {
     "keep_worktree": keep_worktree,
     "merge_worktree": merge_worktree,
     "list_worktrees": list_worktrees,
+    "load_skill": load_skill,
 }
 
 TOOLS_HANDLER.update(TEAMS_HANDLERS)

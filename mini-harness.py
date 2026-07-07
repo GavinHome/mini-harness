@@ -16,10 +16,14 @@ from error_recovery import (
 )
 from memory import extract_memories, inject_memories, load_memories, consolidate_memories
 from teams import consume_lead_inbox
+from skills import scan_skills
 
 print(f"{MAGENTA}BASE_URL={BASE_URL}{RESET}")
 print(f"{MAGENTA}MODEL_ID={MODEL_ID}{RESET}")
 print(f"{GRAY}{'='*50}{RESET}")
+
+# ── 初始化 ──
+scan_skills()  # 启动时扫描 skills 目录，填充 SKILL_REGISTRY
 
 messages = []
 total_input_tokens = 0

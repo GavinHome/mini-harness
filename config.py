@@ -25,6 +25,8 @@ FALLBACK_MODEL_ID = os.getenv("FALLBACK_MODEL_ID")
 WORKDIR = Path.cwd()
 WORKSPACE_DIR = WORKDIR / ".workspace"
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+WORKTREES_DIR = WORKDIR / ".worktrees"
+WORKTREES_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── API 客户端 ──
 client = Anthropic(base_url=BASE_URL, api_key=API_KEY)

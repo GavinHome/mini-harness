@@ -34,6 +34,13 @@ PROMPT_SECTIONS = {
         "Assign one focused task per teammate and let them claim and complete it. "
         "Simple multi-step tasks can be handled directly with todo_write."
     ),
+    "worktree": (
+        "Worktree isolation: use create_worktree to create an isolated git branch + "
+        "directory for parallel work. Bind it to a task with task_id. After work is "
+        "done, use merge_worktree to merge the branch, then remove_worktree or "
+        "keep_worktree. If a task has a worktree, operate inside that directory. "
+        "Available tools: create_worktree, remove_worktree, keep_worktree, merge_worktree, list_worktrees."
+    ),
 }
 
 # ============================================
@@ -66,6 +73,7 @@ def assemble_system_prompt(context: dict) -> str:
         PROMPT_SECTIONS["workspace"],
         PROMPT_SECTIONS["planning"],
         PROMPT_SECTIONS["teams"],
+        PROMPT_SECTIONS["worktree"],
     ]
 
     if context.get("memories"):

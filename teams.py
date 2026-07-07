@@ -144,7 +144,7 @@ def _idle_poll(agent_name: str, messages: list,
             if "Claimed" in result:
                 task = load_task(task_data["id"])
                 if task.worktree:
-                    wt_path = WORKDIR / ".worktrees" / task.worktree
+                    wt_path = WORKTREES_DIR / task.worktree
                     if worktree_context is not None:
                         worktree_context["path"] = str(wt_path)
                 messages.append({"role": "user",
@@ -214,7 +214,7 @@ def spawn_teammate_thread(name: str, role: str, prompt: str) -> str:
             if "Claimed" in result:
                 task = load_task(task_id)
                 if task.worktree:
-                    wt_ctx["path"] = str(WORKDIR / ".worktrees" / task.worktree)
+                    wt_ctx["path"] = str(WORKTREES_DIR / task.worktree)
             return result
 
         def _run_complete_task(task_id: str):
@@ -301,7 +301,9 @@ def spawn_teammate_thread(name: str, role: str, prompt: str) -> str:
                 try:
                     response = client.messages.create(
                         model=MODEL_ID,
-                        system=f"You are '{name}', a {role}. Use tools to complete tasks.",
+                        system=f"You are '{name}', a {role}. "
+                               f"If a task has a worktree, work in that directory. "
+                               f"Use tools to complete tasks.",
                         messages=messages[-20:],
                         tools=sub_tools,
                         max_tokens=8000,

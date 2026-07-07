@@ -16,6 +16,11 @@ from task import (
     get_task,
     claim_task,
     complete_task,
+    create_worktree,
+    remove_worktree,
+    keep_worktree,
+    merge_worktree,
+    list_worktrees,
 )
 from teams import TEAMS_TOOLS, TEAMS_HANDLERS
 
@@ -205,6 +210,56 @@ TOOLS = [
             "required": ["task_id"]
         }
     },
+    {
+        "name": "create_worktree",
+        "description": "Create an isolated git worktree with a custom name. Optionally bind to a task.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Worktree name (e.g. 'backend-dev')"},
+                "task_id": {"type": "string", "description": "Optional: bind this worktree to a task"}
+            },
+            "required": ["name"]
+        }
+    },
+    {
+        "name": "remove_worktree",
+        "description": "Remove a worktree. Refuses if uncommitted changes exist unless discard_changes=true.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Worktree name to remove"},
+                "discard_changes": {"type": "boolean", "description": "Force remove even with uncommitted changes"}
+            },
+            "required": ["name"]
+        }
+    },
+    {
+        "name": "keep_worktree",
+        "description": "Keep a worktree for manual review instead of removing it.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Worktree name to keep"}
+            },
+            "required": ["name"]
+        }
+    },
+    {
+        "name": "merge_worktree",
+        "description": "Merge a worktree's branch (wt/{name}) into main.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Worktree name to merge"}
+            },
+            "required": ["name"]
+        }
+    },
+    {
+        "name": "list_worktrees",
+        "description": "List all active git worktrees.",
+        "input_schema": {"type": "object", "properties": {}, "required": []}},
 ]
 
 TOOLS.extend(TEAMS_TOOLS)
@@ -267,6 +322,11 @@ TOOLS_HANDLER: Dict[str, callable] = {
     "get_task": run_get_task,
     "claim_task": run_claim_task,
     "complete_task": run_complete_task,
+    "create_worktree": create_worktree,
+    "remove_worktree": remove_worktree,
+    "keep_worktree": keep_worktree,
+    "merge_worktree": merge_worktree,
+    "list_worktrees": list_worktrees,
 }
 
 TOOLS_HANDLER.update(TEAMS_HANDLERS)

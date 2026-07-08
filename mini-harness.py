@@ -187,6 +187,10 @@ if __name__ == "__main__":
     # ── 启动 cron 线程（scheduler + autorun）──
     start_cron_threads(agent_loop, messages, context, agent_lock)
 
+    # ── 加载 MCP servers 并注册工具 ──
+    from tools import register_mcp_tools
+    register_mcp_tools()
+
     while True:
         query = input(f"{CYAN}mini-harness >> {RESET}")
 

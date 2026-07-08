@@ -30,3 +30,15 @@ WORKTREES_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── API 客户端 ──
 client = Anthropic(base_url=BASE_URL, api_key=API_KEY)
+
+# ── MCP Servers ──
+# 格式: [{"name": "server名", "command": "可执行文件", "args": ["参数1", "参数2"]}]
+# 示例:
+#   {"name": "filesystem", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]}
+MCP_SERVERS: list[dict] = [
+    {
+        "name": "filesystem",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", str(WORKSPACE_DIR)],
+    },
+]

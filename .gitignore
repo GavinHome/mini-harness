@@ -222,3 +222,4 @@ __marimo__/
 .memory
 .mailboxes
 .worktrees
+.task_outputs

@@ -24,6 +24,7 @@ from task import (
 )
 from skills import load_skill
 from cron import run_schedule_cron, run_list_crons, run_cancel_cron
+from mcp import connect_mcp, get_mcp_tool_pool
 from teams import TEAMS_TOOLS, TEAMS_HANDLERS
 
 # ============================================
@@ -303,6 +304,19 @@ TOOLS = [
             "required": ["job_id"]
         }
     },
+    {
+        "name": "connect_mcp",
+        "description": "Connect to an MCP server by name, dynamically discovering its tools.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "MCP server name"},
+                "command": {"type": "string", "description": "Executable to run (e.g. npx, uvx)"},
+                "args": {"type": "string", "description": "Space-separated arguments (e.g. '-y @modelcontextprotocol/server-filesystem /tmp')"}
+            },
+            "required": ["name", "command"]
+        }
+    },
 ]
 
 TOOLS.extend(TEAMS_TOOLS)
@@ -349,6 +363,34 @@ def run_complete_task(task_id: str) -> str:
     return complete_task(task_id)
 
 
+def register_mcp_tools():
+    """连接 MCP servers（从配置）并注册工具到 TOOLS / TOOLS_HANDLER。"""
+    from mcp import load_servers, get_mcp_tool_pool
+    load_servers()
+    tool_defs, handlers = get_mcp_tool_pool()
+    new_tools = [t for t in tool_defs if t["name"] not in TOOLS_HANDLER]
+    new_handlers = {t["name"]: handlers[t["name"]] for t in new_tools}
+    if new_tools:
+        TOOLS.extend(new_tools)
+        TOOLS_HANDLER.update(new_handlers)
+        print(f"Registered {len(new_tools)} MCP tools into tool pool")
+
+
+def run_connect_mcp(name: str, command: str, args: str = "") -> str:
+    result = connect_mcp(name, command, args)
+    # 只注册新 server 的工具
+    from mcp import _build_tools_for_client, mcp_clients
+    client = mcp_clients.get(name)
+    if client:
+        tool_defs, handlers = _build_tools_for_client(name, client)
+        new = [(t, handlers[t["name"]]) for t in tool_defs if t["name"] not in TOOLS_HANDLER]
+        if new:
+            TOOLS.extend([t for t, _ in new])
+            TOOLS_HANDLER.update({t["name"]: h for t, h in new})
+            print(f"Registered {len(new)} new MCP tools into tool pool")
+    return result
+
+
 # ============================================
 # 工具注册表 (Tool Registry)
 # ============================================
@@ -374,7 +416,9 @@ TOOLS_HANDLER: Dict[str, callable] = {
     "schedule_cron": run_schedule_cron,
     "list_crons": run_list_crons,
     "cancel_cron": run_cancel_cron,
+    "connect_mcp": run_connect_mcp,
 }
+
 
 TOOLS_HANDLER.update(TEAMS_HANDLERS)
 

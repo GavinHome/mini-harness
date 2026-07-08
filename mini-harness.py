@@ -6,7 +6,7 @@ fix_readline()
 
 from utils.colors import CYAN, GREEN, YELLOW, GRAY, MAGENTA, BLUE, RED, RESET
 from config import BASE_URL, API_KEY, MODEL_ID, WORKSPACE_DIR, client
-from tools import TOOLS, execute_tool
+from tools import TOOLS, TOOLS_HANDLER, execute_tool
 from hooks import trigger_hooks
 from system_prompt import get_system_prompt, update_context
 from context import get_context_stats, show_context_bar
@@ -19,6 +19,7 @@ from memory import extract_memories, inject_memories, load_memories, consolidate
 from teams import consume_lead_inbox
 from skills import scan_skills
 from cron import start_cron_threads
+from background import inject_background_notifications, should_run_background, start_background_task
 
 print(f"{MAGENTA}BASE_URL={BASE_URL}{RESET}")
 print(f"{MAGENTA}MODEL_ID={MODEL_ID}{RESET}")
@@ -49,6 +50,9 @@ def agent_loop(messages, context=None):
             messages.append({"role": "user",
                              "content": "<reminder>Update your todos.</reminder>"})
             rounds_since_todo = 0
+
+        # ── 后台任务通知注入 ──
+        inject_background_notifications(messages)
 
         # ── 压缩前快照（记忆提取用，保留原始对话完整度）──
         pre_compress = [
@@ -149,6 +153,13 @@ def agent_loop(messages, context=None):
                 if blocked:
                     tool_results.append({"type": "tool_result", "tool_use_id": item.id,
                                          "content": blocked})
+                    continue
+
+                # ── 慢操作：后台执行 ──
+                if should_run_background(item.name, item.input):
+                    bg_id = start_background_task(item.name, item.input, TOOLS_HANDLER.get(item.name), item.id)
+                    tool_results.append({"type": "tool_result", "tool_use_id": item.id,
+                                         "content": f"[Background task {bg_id} started] Result will arrive as a task_notification."})
                     continue
 
                 result = execute_tool(item)
